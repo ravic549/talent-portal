@@ -112,7 +112,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-
 .st-na{background:var(--surface3);color:var(--text2);}
 .cv-chip{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;background:var(--green-bg);color:var(--green);}
 
-/* PIPELINE STAGE BADGES */
+/* BILLING */
+.billing-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--shadow-sm);margin-bottom:10px;}
+.billing-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.billing-name{font-size:14px;font-weight:600;color:var(--text);}
+.billing-client{font-size:12px;font-weight:600;color:var(--teal);margin-top:2px;}
+.billing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.billing-field{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);padding:8px 10px;}
+.billing-lbl{font-size:10px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px;}
+.billing-val{font-size:14px;font-weight:600;color:var(--text);}
+.billing-val.margin{color:var(--green);}
+.billing-val.total{color:var(--accent);font-size:16px;}
+.billing-status{font-size:10px;padding:2px 9px;border-radius:20px;font-weight:600;}
+.bs-active{background:var(--green-bg);color:var(--green);}
+.bs-pending{background:var(--amber-bg);color:var(--amber);}
+.bs-completed{background:var(--accent-light);color:var(--accent);}
+.bs-hold{background:var(--surface3);color:var(--text2);}
+.client-rev-row{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rsm);margin-bottom:8px;}
+.rev-bar-wrap{flex:1;margin:0 16px;}
+.rev-bar-track{height:6px;background:var(--surface3);border-radius:10px;overflow:hidden;}
+.rev-bar-fill{height:100%;background:var(--accent);border-radius:10px;transition:width .5s;}
+
 .stage{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;display:inline-block;white-space:nowrap;}
 .stage-submitted{background:#e8f0fb;color:#1a56b0;}
 .stage-screening{background:var(--amber-bg);color:var(--amber);}
@@ -288,6 +308,7 @@ tr:last-child td{border-bottom:none;}
       <button class="nav-tab active" id="tab-candidates" onclick="switchTab('candidates')">👥 <span>Candidates</span></button>
       <button class="nav-tab" id="tab-requirements" onclick="switchTab('requirements')">📋 <span>Requirements</span></button>
       <button class="nav-tab" id="tab-pipeline" onclick="switchTab('pipeline')">🔄 <span>Pipeline</span></button>
+      <button class="nav-tab" id="tab-revenue" onclick="switchTab('revenue')">💰 <span>Revenue</span></button>
     </div>
     <div class="top-actions">
       <div class="user-pill"><div class="u-dot"></div><span id="userEmail">—</span></div>
@@ -350,6 +371,26 @@ tr:last-child td{border-bottom:none;}
       </div>
     </div>
     <div id="pipelineView"><div class="loading">Loading…</div></div>
+  </div>
+
+  <!-- REVENUE TAB -->
+  <div id="view-revenue" class="main" style="display:none">
+    <div class="page-hd">
+      <div><div class="page-title">Revenue</div><div class="page-sub">Billing tracker — your margin per placement</div></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select class="fsel" id="revClientF" onchange="renderRevenue()"><option value="">All clients</option></select>
+        <select class="fsel" id="revStatusF" onchange="renderRevenue()"><option value="">All billing statuses</option><option>Active</option><option>Pending</option><option>Completed</option><option>On Hold</option></select>
+      </div>
+    </div>
+    <!-- Revenue summary stats -->
+    <div class="stats" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.75rem">
+      <div class="stat hi"><div class="stat-icon">💰</div><div class="stat-val" id="rev-month">₹0</div><div class="stat-lbl">This Month</div></div>
+      <div class="stat"><div class="stat-icon">📈</div><div class="stat-val" id="rev-total">₹0</div><div class="stat-lbl">Total Earned</div></div>
+      <div class="stat"><div class="stat-icon">⏳</div><div class="stat-val" id="rev-pending">₹0</div><div class="stat-lbl">Pending / Expected</div></div>
+      <div class="stat"><div class="stat-icon">🔧</div><div class="stat-val" id="rev-active">0</div><div class="stat-lbl">Active Contractors</div></div>
+      <div class="stat"><div class="stat-icon">📊</div><div class="stat-val" id="rev-avg">₹0</div><div class="stat-lbl">Avg Margin / Placement</div></div>
+    </div>
+    <div id="revenueView"><div class="loading">Loading…</div></div>
   </div>
 </div>
 
@@ -439,23 +480,30 @@ tr:last-child td{border-bottom:none;}
 <!-- UPDATE STAGE MODAL -->
 <div class="mo" id="stageModal" style="display:none">
   <div class="md md-sm">
-    <div class="md-hd"><div><div class="md-title">Update Stage</div><div class="md-sub" id="stageModalSub">—</div></div><button class="xbtn" onclick="closeStageModal()">✕</button></div>
-    <div class="ff full" style="margin-bottom:12px">
-      <label>Pipeline Stage *</label>
-      <select id="stage-select">
-        <option value="Submitted">Submitted</option>
-        <option value="Screening">Screening</option>
-        <option value="Interview">Interview</option>
-        <option value="Offer">Offer</option>
-        <option value="Hired">Hired</option>
-        <option value="Rejected">Rejected</option>
-      </select>
+    <div class="md-hd"><div><div class="md-title">Update Submission</div><div class="md-sub" id="stageModalSub">—</div></div><button class="xbtn" onclick="closeStageModal()">✕</button></div>
+    <div class="fgrid">
+      <div class="ff full"><label>Pipeline Stage *</label>
+        <select id="stage-select" onchange="toggleBillingSection()"><option value="Submitted">Submitted</option><option value="Screening">Screening</option><option value="Interview">Interview</option><option value="Offer">Offer</option><option value="Hired">Hired</option><option value="Rejected">Rejected</option></select>
+      </div>
+      <div class="ff full"><label>Client Feedback</label><textarea id="stage-feedback" placeholder="Client feedback or reason for rejection…"></textarea></div>
+      <!-- BILLING SECTION — shown when Hired -->
+      <div class="ff full" id="billingSection" style="display:none">
+        <div style="background:var(--green-bg);border:1px solid rgba(26,138,74,.2);border-radius:var(--rsm);padding:12px 14px;margin-bottom:4px">
+          <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:10px">💰 Billing Details</div>
+          <div class="fgrid">
+            <div class="ff"><label>Candidate Rate (per month)</label><input type="text" id="b-crate" placeholder="e.g. 1 LPM or ₹1,00,000"/></div>
+            <div class="ff"><label>Client Rate (per month)</label><input type="text" id="b-clrate" placeholder="e.g. 2 LPM or ₹2,00,000"/></div>
+            <div class="ff"><label>Your Margin (per month)</label><input type="text" id="b-margin" placeholder="Auto-calculated or enter manually" style="color:var(--green);font-weight:600"/></div>
+            <div class="ff"><label>Billing Status</label><select id="b-status"><option value="Active">Active</option><option value="Pending">Pending</option><option value="Completed">Completed</option><option value="On Hold">On Hold</option></select></div>
+            <div class="ff"><label>Billing Start Date</label><input type="date" id="b-start"/></div>
+            <div class="ff"><label>Billing End Date</label><input type="date" id="b-end"/></div>
+            <div class="ff"><label>Months Billed</label><input type="number" id="b-months" placeholder="e.g. 3" min="0" step="0.5" oninput="calcTotal()"/></div>
+            <div class="ff"><label>Total Earned (₹)</label><input type="number" id="b-total" placeholder="Auto-calculated" style="color:var(--accent);font-weight:600"/></div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="ff full" style="margin-bottom:12px">
-      <label>Client Feedback</label>
-      <textarea id="stage-feedback" placeholder="Client feedback or reason for rejection…"></textarea>
-    </div>
-    <div class="factions"><button class="btn btn-secondary" style="flex:1" onclick="closeStageModal()">Cancel</button><button class="btn btn-primary" style="flex:2" onclick="saveStage()">Update Stage</button></div>
+    <div class="factions"><button class="btn btn-secondary" style="flex:1" onclick="closeStageModal()">Cancel</button><button class="btn btn-primary" style="flex:2" onclick="saveStage()">Save Changes</button></div>
   </div>
 </div>
 
@@ -594,7 +642,7 @@ async function loadSubmissions(){
 // ── TABS ──
 function switchTab(tab){
   currentTab=tab;
-  ['candidates','requirements','pipeline'].forEach(t=>{
+  ['candidates','requirements','pipeline','revenue'].forEach(t=>{
     document.getElementById('tab-'+t).classList.toggle('active',t===tab);
     document.getElementById('view-'+t).style.display=t===tab?'block':'none';
   });
@@ -603,6 +651,7 @@ function switchTab(tab){
   else if(tab==='requirements'){addBtn.textContent='+ Add Requirement';addBtn.style.display='';}
   else{addBtn.style.display='none';}
   if(tab==='pipeline')renderPipeline();
+  if(tab==='revenue')renderRevenue();
 }
 
 function handleAddBtn(){
@@ -738,13 +787,12 @@ function renderPipeline(){
   if(clientF)subs=subs.filter(s=>s.requirements?.client_name===clientF);
   if(reqF)subs=subs.filter(s=>s.requirement_id===reqF);
   const stages=['Submitted','Screening','Interview','Offer','Hired','Rejected'];
-  const stageBg={'Submitted':'#e8f0fb','Screening':var_amber_bg,'Interview':var_purple_bg,'Offer':var_teal_bg,'Hired':var_green_bg,'Rejected':var_red_bg};
   const el=document.getElementById('pipelineView');
   if(!subs.length&&!allSubmissions.length){el.innerHTML='<div class="empty">No submissions yet.<br>Go to Requirements and click "Submit Profile" to add candidates to a pipeline.</div>';return;}
   if(!subs.length){el.innerHTML='<div class="empty">No submissions match your filters.</div>';return;}
   el.innerHTML='<div class="pipeline-wrap">'+stages.map(stage=>{
     const stageSubs=subs.filter(s=>s.stage===stage);
-    const hdrColors={'Submitted':'#1a56b0','Screening':var_amber,'Interview':var_purple,'Offer':var_teal,'Hired':var_green,'Rejected':var_red};
+    const hdrColors={'Submitted':'#1a56b0','Screening':'#b25000','Interview':'#6e40c9','Offer':'#0f6e56','Hired':'#1a8a4a','Rejected':'#c00'};
     const hdrBgs={'Submitted':'#e8f0fb','Screening':'#fef3e2','Interview':'#f0ebff','Offer':'#e1f5ee','Hired':'#e6f4ec','Rejected':'#fff0f0'};
     return`<div class="pipeline-col">
       <div class="pipeline-header" style="background:${hdrBgs[stage]};color:${hdrColors[stage]}">
@@ -762,10 +810,6 @@ function renderPipeline(){
     </div>`;
   }).join('')+'</div>';
 }
-
-// Inline color vars for pipeline (JS strings)
-const var_amber_bg='#fef3e2',var_purple_bg='#f0ebff',var_teal_bg='#e1f5ee',var_green_bg='#e6f4ec',var_red_bg='#fff0f0';
-const var_amber='#b25000',var_purple='#6e40c9',var_teal='#0f6e56',var_green='#1a8a4a',var_red='#c00';
 
 // ── CANDIDATE SIDE PANEL ──
 function openCandSide(id){
@@ -989,16 +1033,66 @@ async function submitToReq(){
 }
 
 // ── UPDATE STAGE ──
-function openStageModal(subId,candName,currentStage){stageSubId=subId;document.getElementById('stageModalSub').textContent=candName;document.getElementById('stage-select').value=currentStage||'Submitted';document.getElementById('stage-feedback').value='';const sub=allSubmissions.find(s=>s.id===subId);if(sub?.client_feedback)document.getElementById('stage-feedback').value=sub.client_feedback;document.getElementById('stageModal').style.display='flex';}
+function openStageModal(subId,candName,currentStage){
+  stageSubId=subId;
+  document.getElementById('stageModalSub').textContent=candName;
+  document.getElementById('stage-select').value=currentStage||'Submitted';
+  document.getElementById('stage-feedback').value='';
+  const sub=allSubmissions.find(s=>s.id===subId);
+  if(sub?.client_feedback)document.getElementById('stage-feedback').value=sub.client_feedback;
+  // Pre-fill billing if exists
+  document.getElementById('b-crate').value=sub?.candidate_rate||'';
+  document.getElementById('b-clrate').value=sub?.client_rate||'';
+  document.getElementById('b-margin').value=sub?.margin||'';
+  document.getElementById('b-status').value=sub?.billing_status||'Active';
+  document.getElementById('b-start').value=sub?.billing_start||'';
+  document.getElementById('b-end').value=sub?.billing_end||'';
+  document.getElementById('b-months').value=sub?.months_billed||'';
+  document.getElementById('b-total').value=sub?.total_earned||'';
+  // Show billing section if Hired or already has billing
+  const showBilling=currentStage==='Hired'||sub?.candidate_rate;
+  document.getElementById('billingSection').style.display=showBilling?'block':'none';
+  document.getElementById('stageModal').style.display='flex';
+}
+
+function toggleBillingSection(){
+  const stage=document.getElementById('stage-select').value;
+  document.getElementById('billingSection').style.display=stage==='Hired'?'block':'none';
+}
+
+function calcTotal(){
+  const margin=parseFloat(document.getElementById('b-margin').value)||0;
+  const months=parseFloat(document.getElementById('b-months').value)||0;
+  if(margin&&months)document.getElementById('b-total').value=(margin*months).toFixed(0);
+}
+
 function closeStageModal(){document.getElementById('stageModal').style.display='none';stageSubId=null;}
 
 async function saveStage(){
   if(!stageSubId)return;
-  const stage=document.getElementById('stage-select').value,feedback=document.getElementById('stage-feedback').value.trim();
+  const stage=document.getElementById('stage-select').value;
+  const feedback=document.getElementById('stage-feedback').value.trim();
+  const payload={stage,client_feedback:feedback||null};
+  // Add billing fields if stage is Hired or billing section visible
+  if(document.getElementById('billingSection').style.display!=='none'){
+    const crate=document.getElementById('b-crate').value.trim();
+    const clrate=document.getElementById('b-clrate').value.trim();
+    const margin=document.getElementById('b-margin').value.trim();
+    const months=parseFloat(document.getElementById('b-months').value)||0;
+    const total=parseFloat(document.getElementById('b-total').value)||0;
+    if(crate)payload.candidate_rate=crate;
+    if(clrate)payload.client_rate=clrate;
+    if(margin)payload.margin=parseFloat(margin)||null;
+    payload.billing_status=document.getElementById('b-status').value||'Active';
+    if(document.getElementById('b-start').value)payload.billing_start=document.getElementById('b-start').value;
+    if(document.getElementById('b-end').value)payload.billing_end=document.getElementById('b-end').value;
+    payload.months_billed=months;
+    payload.total_earned=total;
+  }
   try{
-    const r=await fetch(SB_URL+'/rest/v1/submissions?id=eq.'+stageSubId,{method:'PATCH',headers:{...H(),'Prefer':'return=minimal'},body:JSON.stringify({stage,client_feedback:feedback||null})});
+    const r=await fetch(SB_URL+'/rest/v1/submissions?id=eq.'+stageSubId,{method:'PATCH',headers:{...H(),'Prefer':'return=minimal'},body:JSON.stringify(payload)});
     if(!r.ok)throw 0;
-    closeStageModal();closeSide();toast('Stage updated to '+stage+' ✓','ok');await loadAll();
+    closeStageModal();closeSide();toast('Updated ✓','ok');await loadAll();
   }catch{toast('Update failed','err');}
 }
 
@@ -1040,6 +1134,95 @@ async function importCSV(){
   btn.textContent='Import Candidates';toast(`${done} imported${skipped?', '+skipped+' dupes skipped':''}`,done>0?'ok':'err');
   await loadAll();setTimeout(closeCSV,2500);
 }
+
+// ── REVENUE ──
+function renderRevenue(){
+  const clientF=document.getElementById('revClientF')?.value||'';
+  const statusF=document.getElementById('revStatusF')?.value||'';
+  // Update client filter options
+  const clients=[...new Set(allSubmissions.filter(s=>s.requirements?.client_name).map(s=>s.requirements.client_name))].sort();
+  const cs=document.getElementById('revClientF'),cur=cs?.value||'';
+  if(cs)cs.innerHTML='<option value="">All clients</option>'+clients.map(c=>`<option${cur===c?' selected':''}>${c}</option>`).join('');
+  // Billed submissions only
+  let subs=allSubmissions.filter(s=>s.candidate_rate||s.total_earned);
+  if(clientF)subs=subs.filter(s=>s.requirements?.client_name===clientF);
+  if(statusF)subs=subs.filter(s=>s.billing_status===statusF);
+  // Stats
+  const now=new Date(),thisMonth=now.getFullYear()+'-'+(String(now.getMonth()+1).padStart(2,'0'));
+  const totalEarned=allSubmissions.reduce((a,s)=>a+(s.total_earned||0),0);
+  const activeSubs=allSubmissions.filter(s=>s.billing_status==='Active'&&s.margin);
+  const monthlyRun=activeSubs.reduce((a,s)=>a+(s.margin||0),0);
+  const pendingSubs=allSubmissions.filter(s=>s.billing_status==='Pending'&&s.margin);
+  const pendingVal=pendingSubs.reduce((a,s)=>a+(s.margin||0),0);
+  const avgMargin=allSubmissions.filter(s=>s.margin).length>0?allSubmissions.filter(s=>s.margin).reduce((a,s)=>a+(s.margin||0),0)/allSubmissions.filter(s=>s.margin).length:0;
+  document.getElementById('rev-month').textContent=fmt_money(monthlyRun);
+  document.getElementById('rev-total').textContent=fmt_money(totalEarned);
+  document.getElementById('rev-pending').textContent=fmt_money(pendingVal);
+  document.getElementById('rev-active').textContent=activeSubs.length;
+  document.getElementById('rev-avg').textContent=fmt_money(avgMargin);
+  const el=document.getElementById('revenueView');
+  if(!subs.length){
+    el.innerHTML='<div class="empty">No billing data yet.<br><span style="font-size:12px">When a candidate is hired, update their submission stage to "Hired" and fill in the billing details.</span></div>';
+    return;
+  }
+  // Revenue by client
+  const byClient={};
+  allSubmissions.filter(s=>s.total_earned&&s.requirements?.client_name).forEach(s=>{
+    const c=s.requirements.client_name;
+    byClient[c]=(byClient[c]||0)+(s.total_earned||0);
+  });
+  const topClients=Object.entries(byClient).sort((a,b)=>b[1]-a[1]);
+  const maxRev=topClients[0]?.[1]||1;
+  const clientHtml=topClients.length?`
+    <div style="margin-bottom:1.75rem">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">Revenue by Client</div>
+      ${topClients.map(([client,rev])=>`
+        <div class="client-rev-row">
+          <div style="min-width:130px;font-size:13px;font-weight:600;color:var(--teal)">${client}</div>
+          <div class="rev-bar-wrap"><div class="rev-bar-track"><div class="rev-bar-fill" style="width:${Math.round((rev/maxRev)*100)}%"></div></div></div>
+          <div style="min-width:80px;text-align:right;font-size:13px;font-weight:700;color:var(--accent)">${fmt_money(rev)}</div>
+        </div>`).join('')}
+    </div>`:'';
+  // Individual placement cards
+  const placementHtml=subs.map(s=>{
+    const cand=s.candidates;
+    const req=s.requirements;
+    const monthsActive=s.months_billed||calcMonths(s.billing_start,s.billing_end||new Date().toISOString().slice(0,10));
+    return`<div class="billing-card">
+      <div class="billing-header">
+        <div>
+          <div class="billing-name">${cand?.full_name||'—'}</div>
+          <div class="billing-client">${req?.client_name||'—'} · ${req?.role||'—'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="billing-status ${bsc(s.billing_status)}">${s.billing_status||'Pending'}</span>
+          <button class="btn btn-ghost btn-sm" onclick="openStageModal('${s.id}','${(cand?.full_name||'').replace(/'/g,"\\'")}','${s.stage}')">✏️ Edit</button>
+        </div>
+      </div>
+      <div class="billing-grid">
+        <div class="billing-field"><div class="billing-lbl">Candidate Rate</div><div class="billing-val">${s.candidate_rate||'—'}</div></div>
+        <div class="billing-field"><div class="billing-lbl">Client Rate</div><div class="billing-val">${s.client_rate||'—'}</div></div>
+        <div class="billing-field"><div class="billing-lbl">Your Margin / Month</div><div class="billing-val margin">${s.margin?fmt_money(s.margin):'—'}</div></div>
+        <div class="billing-field"><div class="billing-lbl">Months Billed</div><div class="billing-val">${s.months_billed||monthsActive.toFixed(1)}</div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:12px;color:var(--text2)">
+          ${s.billing_start?'Started: '+fmt(s.billing_start):''}
+          ${s.billing_end?' · Ends: '+fmt(s.billing_end):''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">Total Earned</div>
+          <div class="billing-val total">${s.total_earned?fmt_money(s.total_earned):s.margin?fmt_money(s.margin*monthsActive):'—'}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML=clientHtml+'<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">All Placements</div>'+placementHtml;
+}
+
+function fmt_money(n){if(!n)return '₹0';if(n>=100000)return '₹'+( n/100000).toFixed(2)+'L';if(n>=1000)return '₹'+(n/1000).toFixed(1)+'K';return '₹'+Math.round(n);}
+function bsc(s){return s==='Active'?'bs-active':s==='Pending'?'bs-pending':s==='Completed'?'bs-completed':'bs-hold';}
+function calcMonths(start,end){if(!start)return 0;const s=new Date(start),e=end?new Date(end):new Date();return Math.max(0,(e-s)/(1000*60*60*24*30.44));}
 
 function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(type?' '+type:'');t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3000);}
 
