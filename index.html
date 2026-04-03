@@ -343,6 +343,7 @@ tr:last-child td{border-bottom:none;}
         <button class="vbtn active" id="vcard" onclick="setView('card')">⊞ Cards</button>
         <button class="vbtn" id="vtable" onclick="setView('table')">☰ Tracker</button>
       </div>
+      <button class="btn btn-secondary btn-sm" onclick="exportCSV()" title="Export filtered candidates to Excel/CSV">⬇ Export</button>
     </div>
     <div class="meta-bar"><div class="meta-txt" id="meta">—</div></div>
     <div id="candidateView"><div class="loading">Loading…</div></div>
@@ -427,6 +428,7 @@ tr:last-child td{border-bottom:none;}
       <div class="ff"><label>Source</label><select id="f-source"><option value="">Select</option><option>Naukri</option><option>LinkedIn</option><option>Referral</option><option>Direct</option><option>Job Portal</option><option>Other</option></select></div>
       <div class="ff"><label>LinkedIn URL</label><input type="text" id="f-linkedin" placeholder="linkedin.com/in/username"/></div>
       <div class="ff full"><label>Skills *</label><input type="text" id="f-skills" placeholder="SAP ABAP, Fiori, OData, BTP"/><span class="fhint">Separate with commas</span></div>
+      <div class="ff full"><label>Internal Notes</label><textarea id="f-notes" placeholder="e.g. Spoken to twice, prefers remote, do not contact before April…" style="min-height:70px;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);font-size:13px;color:var(--text);font-family:inherit;width:100%;resize:vertical;transition:all .14s;"></textarea><span class="fhint">Internal only — not visible to candidates or clients</span></div>
       <div class="ff full"><label>CV / Resume (PDF, DOC, DOCX)</label>
         <div class="fdrop" id="cvDrop" onclick="document.getElementById('cvFile').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
           <input type="file" id="cvFile" accept=".pdf,.doc,.docx" onchange="fileChosen(event)"/>
@@ -846,6 +848,7 @@ function openCandSide(id){
       <div class="sec"><div class="sec-title">Skills (${(c.skills||[]).length})</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px">${(c.skills||[]).map(s=>`<span class="tag">${s}</span>`).join('')||'<span style="color:var(--text3)">No skills listed</span>'}</div>
       </div>
+      ${c.notes?`<div class="divider"></div><div class="sec"><div class="sec-title">📝 Internal Notes</div><div style="font-size:13px;color:var(--text);line-height:1.6;background:var(--amber-bg);border:1px solid rgba(178,80,0,.15);border-radius:var(--rsm);padding:10px 12px;white-space:pre-wrap">${c.notes}</div></div>`:''}
       <div class="divider"></div>
       <div class="sec">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px"><div class="sec-title" style="margin:0">Fit Score</div><span style="font-size:21px;font-weight:700;color:var(--accent)">${sc}%</span></div>
@@ -959,9 +962,9 @@ async function uploadCV(f){const fn=Date.now()+'_'+f.name.replace(/\s+/g,'_');co
 
 // ── ADD/EDIT CANDIDATE ──
 function openAdd(){editId=null;cvFileObj=null;document.getElementById('formTitle').textContent='Add New Candidate';document.getElementById('formSub').textContent='Fill in the details';document.getElementById('submitBtn').textContent='Save Candidate';clearForm();document.getElementById('dupWarning').style.display='none';document.getElementById('addModal').style.display='flex';}
-function openEdit(id){const c=allCandidates.find(x=>x.id===id);if(!c)return;editId=id;cvFileObj=null;document.getElementById('formTitle').textContent='Edit Candidate';document.getElementById('formSub').textContent='Updating: '+c.full_name;document.getElementById('submitBtn').textContent='Save Changes';document.getElementById('dupWarning').style.display='none';document.getElementById('f-name').value=c.full_name||'';document.getElementById('f-role').value=c.role||'';document.getElementById('f-email').value=c.email||'';document.getElementById('f-phone').value=c.phone||'';document.getElementById('f-loc').value=c.location||'';document.getElementById('f-exp').value=c.experience||'';document.getElementById('f-notice').value=c.notice_period||'';document.getElementById('f-type').value=c.candidate_type||'';document.getElementById('f-rate').value=c.rate||'';document.getElementById('f-status').value=c.status||'';document.getElementById('f-source').value=c.source||'';document.getElementById('f-linkedin').value=c.linkedin_url||'';document.getElementById('f-skills').value=(c.skills||[]).join(', ');document.getElementById('chosenFile').textContent=c.cv_url?'CV on file — upload to replace':'';document.getElementById('addModal').style.display='flex';closeSide();}
+function openEdit(id){const c=allCandidates.find(x=>x.id===id);if(!c)return;editId=id;cvFileObj=null;document.getElementById('formTitle').textContent='Edit Candidate';document.getElementById('formSub').textContent='Updating: '+c.full_name;document.getElementById('submitBtn').textContent='Save Changes';document.getElementById('dupWarning').style.display='none';document.getElementById('f-name').value=c.full_name||'';document.getElementById('f-role').value=c.role||'';document.getElementById('f-email').value=c.email||'';document.getElementById('f-phone').value=c.phone||'';document.getElementById('f-loc').value=c.location||'';document.getElementById('f-exp').value=c.experience||'';document.getElementById('f-notice').value=c.notice_period||'';document.getElementById('f-type').value=c.candidate_type||'';document.getElementById('f-rate').value=c.rate||'';document.getElementById('f-status').value=c.status||'';document.getElementById('f-source').value=c.source||'';document.getElementById('f-linkedin').value=c.linkedin_url||'';document.getElementById('f-skills').value=(c.skills||[]).join(', ');document.getElementById('f-notes').value=c.notes||'';document.getElementById('chosenFile').textContent=c.cv_url?'CV on file — upload to replace':'';document.getElementById('addModal').style.display='flex';closeSide();}
 function closeForm(){document.getElementById('addModal').style.display='none';editId=null;cvFileObj=null;clearForm();}
-function clearForm(){['f-name','f-role','f-email','f-phone','f-loc','f-exp','f-rate','f-linkedin','f-skills'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});['f-notice','f-type','f-status','f-source'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});document.getElementById('chosenFile').textContent='';document.getElementById('cvFile').value='';}
+function clearForm(){['f-name','f-role','f-email','f-phone','f-loc','f-exp','f-rate','f-linkedin','f-skills'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});['f-notice','f-type','f-status','f-source'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});document.getElementById('f-notes').value='';document.getElementById('chosenFile').textContent='';document.getElementById('cvFile').value='';}
 
 async function submitForm(){
   const name=document.getElementById('f-name').value.trim(),role=document.getElementById('f-role').value.trim(),loc=document.getElementById('f-loc').value.trim(),exp=parseInt(document.getElementById('f-exp').value),notice=document.getElementById('f-notice').value,type=document.getElementById('f-type').value,skillsRaw=document.getElementById('f-skills').value.trim();
@@ -969,7 +972,7 @@ async function submitForm(){
   const btn=document.getElementById('submitBtn');btn.disabled=true;const orig=btn.textContent;btn.textContent='Saving…';
   try{
     let cv_url=undefined;if(cvFileObj){btn.textContent='Uploading CV…';cv_url=await uploadCV(cvFileObj);}btn.textContent='Saving…';
-    const payload={full_name:name,role,location:loc,experience:exp,notice_period:notice,candidate_type:type,rate:document.getElementById('f-rate').value.trim()||null,email:document.getElementById('f-email').value.trim()||null,phone:document.getElementById('f-phone').value.trim()||null,status:document.getElementById('f-status').value||'Active',source:document.getElementById('f-source').value||null,linkedin_url:document.getElementById('f-linkedin').value.trim()||null,skills:skillsRaw.split(',').map(s=>s.trim()).filter(Boolean)};
+    const payload={full_name:name,role,location:loc,experience:exp,notice_period:notice,candidate_type:type,rate:document.getElementById('f-rate').value.trim()||null,email:document.getElementById('f-email').value.trim()||null,phone:document.getElementById('f-phone').value.trim()||null,status:document.getElementById('f-status').value||'Active',source:document.getElementById('f-source').value||null,linkedin_url:document.getElementById('f-linkedin').value.trim()||null,notes:document.getElementById('f-notes').value.trim()||null,skills:skillsRaw.split(',').map(s=>s.trim()).filter(Boolean)};
     if(cv_url!==undefined)payload.cv_url=cv_url;
     let r;if(editId){r=await fetch(SB_URL+'/rest/v1/candidates?id=eq.'+editId,{method:'PATCH',headers:{...H(),'Prefer':'return=minimal'},body:JSON.stringify(payload)});}else{r=await fetch(SB_URL+'/rest/v1/candidates',{method:'POST',headers:H(),body:JSON.stringify(payload)});}
     if(!r.ok){const e=await r.json();throw new Error(e.message||'Save failed');}
@@ -1240,6 +1243,44 @@ function fmt_money(n){
 }
 function bsc(s){return s==='Active'?'bs-active':s==='Pending'?'bs-pending':s==='Completed'?'bs-completed':'bs-hold';}
 function calcMonths(start,end){if(!start)return 0;const s=new Date(start),e=end?new Date(end):new Date();return Math.max(0,(e-s)/(1000*60*60*24*30.44));}
+
+// ── EXPORT CSV ──
+function exportCSV(){
+  const list=getCandFiltered();
+  if(!list.length){toast('No candidates to export','err');return;}
+  const headers=['Date Added','Full Name','Role','Location','Experience (yrs)','Notice Period','Candidate Type','Rate / CTC','Status','Source','Email','Phone','Skills','LinkedIn','Notes','CV URL'];
+  const rows=list.map(c=>[
+    fmt(c.added_on),
+    c.full_name||'',
+    c.role||'',
+    c.location||'',
+    c.experience||'',
+    c.notice_period||'',
+    c.candidate_type||'',
+    c.rate||'',
+    c.status||'',
+    c.source||'',
+    c.email||'',
+    c.phone||'',
+    (c.skills||[]).join(' | '),
+    c.linkedin_url||'',
+    (c.notes||'').replace(/\n/g,' '),
+    c.cv_url||''
+  ]);
+  const csvContent=[headers,...rows].map(row=>row.map(cell=>{
+    const s=String(cell).replace(/"/g,'""');
+    return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s}"`:s;
+  }).join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csvContent],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  const now=new Date();
+  a.download=`RS_Talent_Export_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`${list.length} candidates exported ✓`,'ok');
+}
 
 function toast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(type?' '+type:'');t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3000);}
 
