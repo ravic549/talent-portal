@@ -491,9 +491,9 @@ tr:last-child td{border-bottom:none;}
         <div style="background:var(--green-bg);border:1px solid rgba(26,138,74,.2);border-radius:var(--rsm);padding:12px 14px;margin-bottom:4px">
           <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:10px">💰 Billing Details</div>
           <div class="fgrid">
-            <div class="ff"><label>Candidate Rate (per month)</label><input type="text" id="b-crate" placeholder="e.g. 1 LPM or ₹1,00,000"/></div>
-            <div class="ff"><label>Client Rate (per month)</label><input type="text" id="b-clrate" placeholder="e.g. 2 LPM or ₹2,00,000"/></div>
-            <div class="ff"><label>Your Margin (per month)</label><input type="text" id="b-margin" placeholder="Auto-calculated or enter manually" style="color:var(--green);font-weight:600"/></div>
+            <div class="ff"><label>Candidate Rate / Month (₹) *</label><input type="number" id="b-crate" placeholder="e.g. 100000" oninput="calcMargin()"/></div>
+            <div class="ff"><label>Client Rate / Month (₹) *</label><input type="number" id="b-clrate" placeholder="e.g. 200000" oninput="calcMargin()"/></div>
+            <div class="ff"><label>Your Margin / Month (₹)</label><input type="number" id="b-margin" placeholder="Auto-calculated" style="color:var(--green);font-weight:600" oninput="calcTotal()"/></div>
             <div class="ff"><label>Billing Status</label><select id="b-status"><option value="Active">Active</option><option value="Pending">Pending</option><option value="Completed">Completed</option><option value="On Hold">On Hold</option></select></div>
             <div class="ff"><label>Billing Start Date</label><input type="date" id="b-start"/></div>
             <div class="ff"><label>Billing End Date</label><input type="date" id="b-end"/></div>
@@ -1060,6 +1060,16 @@ function toggleBillingSection(){
   document.getElementById('billingSection').style.display=stage==='Hired'?'block':'none';
 }
 
+function calcMargin(){
+  const crate=parseFloat(document.getElementById('b-crate').value)||0;
+  const clrate=parseFloat(document.getElementById('b-clrate').value)||0;
+  if(crate&&clrate){
+    const margin=clrate-crate;
+    document.getElementById('b-margin').value=margin;
+    calcTotal();
+  }
+}
+
 function calcTotal(){
   const margin=parseFloat(document.getElementById('b-margin').value)||0;
   const months=parseFloat(document.getElementById('b-months').value)||0;
@@ -1080,8 +1090,8 @@ async function saveStage(){
     const margin=document.getElementById('b-margin').value.trim();
     const months=parseFloat(document.getElementById('b-months').value)||0;
     const total=parseFloat(document.getElementById('b-total').value)||0;
-    if(crate)payload.candidate_rate=crate;
-    if(clrate)payload.client_rate=clrate;
+    if(crate)payload.candidate_rate=parseFloat(crate)||null;
+    if(clrate)payload.client_rate=parseFloat(clrate)||null;
     if(margin)payload.margin=parseFloat(margin)||null;
     payload.billing_status=document.getElementById('b-status').value||'Active';
     if(document.getElementById('b-start').value)payload.billing_start=document.getElementById('b-start').value;
@@ -1200,8 +1210,8 @@ function renderRevenue(){
         </div>
       </div>
       <div class="billing-grid">
-        <div class="billing-field"><div class="billing-lbl">Candidate Rate</div><div class="billing-val">${s.candidate_rate||'—'}</div></div>
-        <div class="billing-field"><div class="billing-lbl">Client Rate</div><div class="billing-val">${s.client_rate||'—'}</div></div>
+        <div class="billing-field"><div class="billing-lbl">Candidate Rate</div><div class="billing-val">${fmt_money(s.candidate_rate)}</div></div>
+        <div class="billing-field"><div class="billing-lbl">Client Rate</div><div class="billing-val">${fmt_money(s.client_rate)}</div></div>
         <div class="billing-field"><div class="billing-lbl">Your Margin / Month</div><div class="billing-val margin">${s.margin?fmt_money(s.margin):'—'}</div></div>
         <div class="billing-field"><div class="billing-lbl">Months Billed</div><div class="billing-val">${s.months_billed||monthsActive.toFixed(1)}</div></div>
       </div>
@@ -1220,7 +1230,14 @@ function renderRevenue(){
   el.innerHTML=clientHtml+'<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">All Placements</div>'+placementHtml;
 }
 
-function fmt_money(n){if(!n)return '₹0';if(n>=100000)return '₹'+( n/100000).toFixed(2)+'L';if(n>=1000)return '₹'+(n/1000).toFixed(1)+'K';return '₹'+Math.round(n);}
+function fmt_money(n){
+  if(!n&&n!==0)return '—';
+  n=parseFloat(n);
+  if(isNaN(n))return '—';
+  if(n>=100000)return '₹'+(n/100000).toFixed(2)+'L';
+  if(n>=1000)return '₹'+(n/1000).toFixed(1)+'K';
+  return '₹'+Math.round(n);
+}
 function bsc(s){return s==='Active'?'bs-active':s==='Pending'?'bs-pending':s==='Completed'?'bs-completed':'bs-hold';}
 function calcMonths(start,end){if(!start)return 0;const s=new Date(start),e=end?new Date(end):new Date();return Math.max(0,(e-s)/(1000*60*60*24*30.44));}
 
