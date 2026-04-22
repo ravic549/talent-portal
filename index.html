@@ -554,11 +554,51 @@ td:last-child{border-right:none;}
 <!-- SUBMIT TO REQUIREMENT -->
 <div class="mo" id="submitModal" style="display:none">
   <div class="md md-sm">
-    <div class="md-hd"><div><div class="md-title">Submit to Requirement</div><div class="md-sub" id="submitModalSub">—</div></div><button class="xbtn" onclick="closeSubmitModal()">✕</button></div>
-    <div class="ff full" style="margin-bottom:10px"><label>Requirement *</label><select id="sub-req"><option value="">Select requirement</option></select></div>
-    <div class="ff full" style="margin-bottom:10px"><label>Candidate *</label><select id="sub-cand"><option value="">Select candidate</option></select></div>
-    <div class="ff full" style="margin-bottom:10px"><label>Notes</label><textarea id="sub-notes" placeholder="Any notes…" style="min-height:55px"></textarea></div>
-    <div class="factions"><button class="btn btn-secondary" style="flex:1" onclick="closeSubmitModal()">Cancel</button><button class="btn btn-primary" style="flex:2" onclick="submitToReq()">Submit Profile</button></div>
+    <div class="md-hd">
+      <div>
+        <div class="md-title">Submit Profile</div>
+        <div class="md-sub" id="submitModalSub">—</div>
+      </div>
+      <button class="xbtn" onclick="closeSubmitModal()">✕</button>
+    </div>
+
+    <!-- Candidate info card (shown when submitting from requirement side) -->
+    <div id="sub-cand-card" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);padding:10px 12px;margin-bottom:12px;">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Candidate</div>
+      <div id="sub-cand-card-name" style="font-size:13px;font-weight:600;color:var(--text)">—</div>
+      <div id="sub-cand-card-role" style="font-size:11px;color:var(--text2);margin-top:1px">—</div>
+    </div>
+
+    <!-- Requirement info card (shown when submitting from candidate side) -->
+    <div id="sub-req-card" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);padding:10px 12px;margin-bottom:12px;">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Requirement</div>
+      <div id="sub-req-card-client" style="font-size:11px;font-weight:700;color:var(--teal)">—</div>
+      <div id="sub-req-card-role" style="font-size:13px;font-weight:600;color:var(--text);margin-top:1px">—</div>
+    </div>
+
+    <div class="ff full" style="margin-bottom:10px" id="sub-req-row">
+      <label>Select Requirement *</label>
+      <select id="sub-req">
+        <option value="">Choose a requirement…</option>
+      </select>
+    </div>
+
+    <div class="ff full" style="margin-bottom:10px" id="sub-cand-row">
+      <label>Select Candidate *</label>
+      <select id="sub-cand">
+        <option value="">Choose a candidate…</option>
+      </select>
+    </div>
+
+    <div class="ff full" style="margin-bottom:4px">
+      <label>Notes <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+      <textarea id="sub-notes" placeholder="Any notes about this submission…" style="min-height:55px"></textarea>
+    </div>
+
+    <div class="factions">
+      <button class="btn btn-secondary" style="flex:1" onclick="closeSubmitModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:2" onclick="submitToReq()">Submit Profile</button>
+    </div>
   </div>
 </div>
 
@@ -1107,8 +1147,47 @@ async function submitReq(){
 async function delReq(id,name){if(!confirm('Delete "'+name+'"? Submissions will also be deleted.'))return;try{await fetch(SB_URL+'/rest/v1/submissions?requirement_id=eq.'+id,{method:'DELETE',headers:H()});const r=await fetch(SB_URL+'/rest/v1/requirements?id=eq.'+id,{method:'DELETE',headers:H()});if(!r.ok)throw 0;closeDetail();toast('Requirement deleted','ok');await loadAll();}catch{toast('Delete failed','err');}}
 
 // SUBMIT
-function openSubmitForReq(reqId){document.getElementById('sub-req').value=reqId||'';document.getElementById('sub-cand').value='';document.getElementById('sub-notes').value='';const req=allRequirements.find(x=>x.id===reqId);document.getElementById('submitModalSub').textContent=req?req.client_name+' — '+req.role:'';const rs=document.getElementById('sub-req');rs.innerHTML='<option value="">Select requirement</option>'+allRequirements.filter(r=>r.status==='Open').map(r=>`<option value="${r.id}"${r.id===reqId?' selected':''}>${r.client_name} — ${r.role}</option>`).join('');document.getElementById('sub-cand').innerHTML='<option value="">Select candidate</option>'+allCandidates.map(c=>`<option value="${c.id}">${c.full_name} — ${c.role||''}</option>`).join('');document.getElementById('submitModal').style.display='flex';}
-function openSubmitForCand(candId){document.getElementById('sub-cand').value=candId||'';document.getElementById('sub-req').value='';document.getElementById('sub-notes').value='';const cand=allCandidates.find(x=>x.id===candId);document.getElementById('submitModalSub').textContent=cand?'Submitting: '+cand.full_name:'';document.getElementById('sub-req').innerHTML='<option value="">Select requirement</option>'+allRequirements.filter(r=>r.status==='Open').map(r=>`<option value="${r.id}">${r.client_name} — ${r.role}</option>`).join('');document.getElementById('sub-cand').innerHTML='<option value="">Select candidate</option>'+allCandidates.map(c=>`<option value="${c.id}"${c.id===candId?' selected':''}>${c.full_name} — ${c.role||''}</option>`).join('');document.getElementById('submitModal').style.display='flex';}
+function openSubmitForReq(reqId){
+  const req=allRequirements.find(x=>x.id===reqId);
+  // Show requirement as a card, hide the req dropdown
+  document.getElementById('sub-req-card').style.display='block';
+  document.getElementById('sub-req-card-client').textContent=req?.client_name||'—';
+  document.getElementById('sub-req-card-role').textContent=req?.role||'—';
+  document.getElementById('sub-req-row').style.display='none';
+  // Show candidate dropdown
+  document.getElementById('sub-cand-card').style.display='none';
+  document.getElementById('sub-cand-row').style.display='block';
+  document.getElementById('sub-req').value=reqId||'';
+  document.getElementById('sub-cand').value='';
+  document.getElementById('sub-notes').value='';
+  document.getElementById('submitModalSub').textContent=req?req.client_name+' — '+req.role:'Select a candidate to submit';
+  // Populate candidate dropdown only
+  document.getElementById('sub-cand').innerHTML='<option value="">Choose a candidate…</option>'+allCandidates.map(c=>`<option value="${c.id}">${c.full_name}${c.role?' — '+c.role:''}</option>`).join('');
+  document.getElementById('submitModal').style.display='flex';
+}
+function openSubmitForCand(candId){
+  const cand=allCandidates.find(x=>x.id===candId);
+  // Show candidate as a card, hide the cand dropdown
+  document.getElementById('sub-cand-card').style.display='block';
+  document.getElementById('sub-cand-card-name').textContent=cand?.full_name||'—';
+  document.getElementById('sub-cand-card-role').textContent=(cand?.role||'')+(cand?.notice_period?' · '+cand.notice_period:'');
+  document.getElementById('sub-cand-row').style.display='none';
+  // Show requirement dropdown
+  document.getElementById('sub-req-card').style.display='none';
+  document.getElementById('sub-req-row').style.display='block';
+  document.getElementById('sub-cand').value=candId||'';
+  document.getElementById('sub-req').value='';
+  document.getElementById('sub-notes').value='';
+  document.getElementById('submitModalSub').textContent=cand?'Submitting '+cand.full_name:'Select a requirement';
+  // Populate requirement dropdown with open requirements only
+  const openReqs=allRequirements.filter(r=>r.status==='Open');
+  if(openReqs.length===0){
+    document.getElementById('sub-req').innerHTML='<option value="">No open requirements — add one first</option>';
+  } else {
+    document.getElementById('sub-req').innerHTML='<option value="">Choose a requirement…</option>'+openReqs.map(r=>`<option value="${r.id}">${r.client_name} — ${r.role}</option>`).join('');
+  }
+  document.getElementById('submitModal').style.display='flex';
+}
 function closeSubmitModal(){document.getElementById('submitModal').style.display='none';}
 async function submitToReq(){
   const req=document.getElementById('sub-req').value,cand=document.getElementById('sub-cand').value;
